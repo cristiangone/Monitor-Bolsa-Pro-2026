@@ -1,0 +1,16 @@
+# Contenido del archivo requirements.txt
+streamlit
+pandas
+requests
+pytz
+plotly
+
+
+
+
+
+
+
+
+
+
