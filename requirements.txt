@@ -2,9 +2,9 @@
 streamlit
 pandas
 requests
-pytz
 plotly
 streamlit-google-sheets
+
 
 
 
