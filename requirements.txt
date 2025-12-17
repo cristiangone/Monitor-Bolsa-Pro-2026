@@ -1,9 +1,7 @@
 # Contenido del archivo requirements.txt
-streamlit
-pandas
-requests
 plotly
 streamlit-google-sheets
+
 
 
 
