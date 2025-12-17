@@ -111,30 +111,36 @@ def gestionar_alertas(nemo, variacion, activar_sonido):
         for x in ids_a_borrar:
             st.session_state['alertas_disparadas'].discard(x)
 
-# --- NUEVAS FUNCIONES DE GOOGLE SHEETS ---
+# --- NUEVAS FUNCIONES DE GOOGLE SHEETS OPTIMIZADAS ---
+
+# Definimos el nombre en una constante para no equivocarnos
+NOMBRE_HOJA = "Hoja1" 
 
 def cargar_historial():
-    """Lee datos desde Google Sheets"""
+    """Lee datos desde Google Sheets con manejo de errores robusto"""
     try:
-        # ttl=0 fuerza a leer datos frescos, no de caché
-        df = conn.read(worksheet="Hoja 1", ttl=0)
+        # ttl=0 evita que Streamlit use caché vieja
+        df = conn.read(worksheet=NOMBRE_HOJA, ttl=0)
         
-        # Validación básica si la hoja está vacía o nueva
+        # Si la hoja existe pero está vacía o sin columnas correctas
         if df.empty or 'NEMO' not in df.columns:
             return pd.DataFrame(columns=['Fecha', 'NEMO', 'Precio', 'Var'])
             
-        # Asegurar tipos de datos correctos
+        # Limpieza y conversión de tipos
         df['Fecha'] = pd.to_datetime(df['Fecha'])
         df['Precio'] = pd.to_numeric(df['Precio'], errors='coerce')
         df['Var'] = pd.to_numeric(df['Var'], errors='coerce')
         
         return df.sort_values('Fecha')
+        
     except Exception as e:
-        # Si falla (ej: hoja no existe), retornamos vacío
+        # Si falla (ej: la hoja no se llama 'Hoja1'), devolvemos un DF vacío para no romper la app
+        # Opcional: imprimir el error en consola para ti
+        print(f"DEBUG - Error cargando historial: {e}") 
         return pd.DataFrame(columns=['Fecha', 'NEMO', 'Precio', 'Var'])
 
 def guardar_datos(nuevos_datos):
-    """Guarda nuevos datos en Google Sheets"""
+    """Guarda nuevos datos concatenando y reescribiendo"""
     if not nuevos_datos: return
 
     timestamp = datetime.now(ZONA_HORARIA).strftime('%Y-%m-%d %H:%M:%S')
@@ -152,21 +158,21 @@ def guardar_datos(nuevos_datos):
     
     if not registros: return
 
-    # DataFrame con lo nuevo
     df_nuevos = pd.DataFrame(registros)
-    
-    # Cargar lo viejo
     df_actual = cargar_historial()
     
-    # Unir (Concatenar)
+    # Concatenar asegurando que los índices se ignoren
     df_final = pd.concat([df_actual, df_nuevos], ignore_index=True)
     
     # Escribir de vuelta a Sheets
     try:
-        conn.update(worksheet="Hoja 1", data=df_final)
+        conn.update(worksheet=NOMBRE_HOJA, data=df_final)
+        # Feedback visual sutil (Opcional, si molesta quítalo)
+        # st.toast("Datos sincronizados con Sheets", icon="☁️")
     except Exception as e:
-        st.error(f"Error guardando en Sheets: {e}")
-
+        st.error(f"⚠️ Error crítico guardando en Sheets: Verifica que la hoja se llame '{NOMBRE_HOJA}' y que el bot tenga permisos de Editor.")
+        print(f"DEBUG - Error guardando: {e}")
+        
 def obtener_datos_api(url, key):
     try:
         r = requests.get(f"{url}/Instrumentos", headers={"Ocp-Apim-Subscription-Key": key}, timeout=10)
@@ -301,3 +307,4 @@ else:
         # Ten cuidado de no bajar mucho este tiempo si tienes muchos usuarios.
         time.sleep(frecuencia * 60)
         st.rerun()
+
