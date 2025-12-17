@@ -1,6 +1,6 @@
 # Contenido del archivo requirements.txt
 plotly
-streamlit-google-sheets
+st-gsheets-connection
 
 
 
